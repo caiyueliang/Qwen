@@ -13,7 +13,10 @@ COPY ./utils.py ./
 COPY ./examples/* ./examples/
 COPY ./eval/* ./eval/
 COPY ./finetune/* ./finetune/
+COPY ./flask_server.py ./
 
+RUN pip install -r ./requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/
 
-CMD ["sleep", "864000"]
+# CMD ["sleep", "864000"]
 # CMD ["python3", "web_demo.py", "--server-port", "8080", "--server-name", "0.0.0.0", "-c", "/data/shared/Qwen/Qwen-Chat/"]
+CMD ["python3", "flask_server.py"]
