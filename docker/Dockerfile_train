@@ -1,0 +1,19 @@
+FROM qwenllm/qwen:cu117
+
+
+WORKDIR /data/shared/Qwen/
+
+COPY ../requirements.txt ./
+COPY ../requirements_web_demo.txt ./
+COPY ../cli_demo.py ./
+COPY ../web_demo.py ./
+COPY ../openai_api.py ./
+COPY ../finetune.py ./
+COPY ../utils.py ./
+COPY ./examples/* ./examples/
+COPY ./eval/* ./eval/
+COPY ./finetune/* ./finetune/
+
+
+CMD ["sleep 864000"]
+# CMD ["python3", "web_demo.py", "--server-port", "8080", "--server-name", "0.0.0.0", "-c", "/data/shared/Qwen/Qwen-Chat/"]
