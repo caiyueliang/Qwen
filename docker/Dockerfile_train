@@ -3,13 +3,13 @@ FROM qwenllm/qwen:cu117
 
 WORKDIR /data/shared/Qwen/
 
-COPY ../requirements.txt ./
-COPY ../requirements_web_demo.txt ./
-COPY ../cli_demo.py ./
-COPY ../web_demo.py ./
-COPY ../openai_api.py ./
-COPY ../finetune.py ./
-COPY ../utils.py ./
+COPY ./requirements.txt ./
+COPY ./requirements_web_demo.txt ./
+COPY ./cli_demo.py ./
+COPY ./web_demo.py ./
+COPY ./openai_api.py ./
+COPY ./finetune.py ./
+COPY ./utils.py ./
 COPY ./examples/* ./examples/
 COPY ./eval/* ./eval/
 COPY ./finetune/* ./finetune/
