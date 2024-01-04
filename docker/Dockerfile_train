@@ -15,5 +15,5 @@ COPY ./eval/* ./eval/
 COPY ./finetune/* ./finetune/
 
 
-CMD ["sleep 864000"]
+CMD ["sleep", "864000"]
 # CMD ["python3", "web_demo.py", "--server-port", "8080", "--server-name", "0.0.0.0", "-c", "/data/shared/Qwen/Qwen-Chat/"]
