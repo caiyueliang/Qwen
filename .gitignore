@@ -10,3 +10,4 @@ build
 
 /private/
 data/
+*_temp.json
