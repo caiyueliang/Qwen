@@ -25,7 +25,7 @@ IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 @dataclass
 class ModelArguments:
     model_name_or_path: Optional[str] = field(default="Qwen/Qwen-7B")
-
+    pretrained_model_path: Optional[str] = field(default="Qwen/Qwen-7B")
 
 @dataclass
 class DataArguments:
@@ -47,6 +47,10 @@ class TrainingArguments(transformers.TrainingArguments):
         metadata={
             "help": "Maximum sequence length. Sequences will be right padded (and possibly truncated)."
         },
+    )
+    output_path: str = field(
+        default="./output",
+        metadata={"help": "The output directory where the model predictions and checkpoints will be written."},
     )
     use_lora: bool = False
 
@@ -293,7 +297,8 @@ def train():
 
     # Set RoPE scaling factor
     config = transformers.AutoConfig.from_pretrained(
-        model_args.model_name_or_path,
+        # model_args.model_name_or_path,
+        model_args.pretrained_model_path,
         cache_dir=training_args.cache_dir,
         trust_remote_code=True,
     )
@@ -301,7 +306,8 @@ def train():
 
     # Load model and tokenizer
     model = transformers.AutoModelForCausalLM.from_pretrained(
-        model_args.model_name_or_path,
+        # model_args.model_name_or_path,
+        model_args.pretrained_model_path,
         config=config,
         cache_dir=training_args.cache_dir,
         device_map=device_map,
@@ -313,7 +319,8 @@ def train():
         else None,
     )
     tokenizer = transformers.AutoTokenizer.from_pretrained(
-        model_args.model_name_or_path,
+        # model_args.model_name_or_path,
+        model_args.pretrained_model_path,
         cache_dir=training_args.cache_dir,
         model_max_length=training_args.model_max_length,
         padding_side="right",
@@ -323,7 +330,8 @@ def train():
     tokenizer.pad_token_id = tokenizer.eod_id
 
     if training_args.use_lora:
-        if lora_args.q_lora or 'chat' in model_args.model_name_or_path.lower():
+        # if lora_args.q_lora or 'chat' in model_args.model_name_or_path.lower():
+        if lora_args.q_lora or 'chat' in model_args.pretrained_model_path.lower():
             modules_to_save = None
         else:
             modules_to_save = ["wte", "lm_head"]
@@ -362,7 +370,7 @@ def train():
     trainer.train()
     trainer.save_state()
 
-    safe_save_model_for_hf_trainer(trainer=trainer, output_dir=training_args.output_dir, bias=lora_args.lora_bias)
+    safe_save_model_for_hf_trainer(trainer=trainer, output_dir=training_args.output_path, bias=lora_args.lora_bias)
 
 
 if __name__ == "__main__":
