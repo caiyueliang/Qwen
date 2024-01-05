@@ -269,11 +269,11 @@ def train():
         training_args,
         lora_args,
     ) = parser.parse_args_into_dataclasses()
-    logger.warning("[train] parser: {}".format(parser))
+    logger.info("[train] parser: {}".format(parser))
     logger.warning("[train] model_args: {}".format(model_args))
-    logger.warning("[train] data_args: {}".format(data_args))
-    logger.warning("[train] training_args: {}".format(training_args))
-    logger.warning("[train] lora_args: {}".format(lora_args))
+    logger.info("[train] data_args: {}".format(data_args))
+    logger.info("[train] training_args: {}".format(training_args))
+    logger.info("[train] lora_args: {}".format(lora_args))
 
     # This serves for single-gpu qlora.
     if getattr(training_args, 'deepspeed', None) and int(os.environ.get("WORLD_SIZE", 1))==1:
