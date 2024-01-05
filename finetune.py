@@ -140,6 +140,7 @@ def preprocess(
     # Apply prompt templates
     input_ids, targets = [], []
     for i, source in enumerate(sources):
+        print("[source] {}".format(source))
         if roles[source[0]["from"]] != roles["user"]:
             source = source[1:]
 
@@ -168,6 +169,8 @@ def preprocess(
         targets.append(target[:max_len])
     input_ids = torch.tensor(input_ids, dtype=torch.int)
     targets = torch.tensor(targets, dtype=torch.int)
+    print("[input_ids] {}".format(input_ids))
+    print("[targets] {}".format(targets))
 
     return dict(
         input_ids=input_ids,
