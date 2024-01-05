@@ -4,7 +4,8 @@
 from dataclasses import dataclass, field
 import json
 import math
-import logging
+# import logging
+from loguru import logger
 import os
 from typing import Dict, Optional, List
 import torch
@@ -103,7 +104,7 @@ local_rank = None
 
 def rank0_print(*args):
     if local_rank == 0:
-        print(*args)
+        logger.warning(*args)
 
 
 def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: str, bias="none"):
@@ -140,7 +141,7 @@ def preprocess(
     # Apply prompt templates
     input_ids, targets = [], []
     for i, source in enumerate(sources):
-        print("[{}] [source] {}".format(i, source))
+        # print("[{}] [source] {}".format(i, source))
         if roles[source[0]["from"]] != roles["user"]:
             source = source[1:]
 
@@ -268,6 +269,11 @@ def train():
         training_args,
         lora_args,
     ) = parser.parse_args_into_dataclasses()
+    rank0_print("[train] parser: {}".format(parser))
+    rank0_print("[train] model_args: {}".format(model_args))
+    rank0_print("[train] data_args: {}".format(data_args))
+    rank0_print("[train] training_args: {}".format(training_args))
+    rank0_print("[train] lora_args: {}".format(lora_args))
 
     # This serves for single-gpu qlora.
     if getattr(training_args, 'deepspeed', None) and int(os.environ.get("WORLD_SIZE", 1))==1:
@@ -281,7 +287,7 @@ def train():
     if lora_args.q_lora:
         device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)} if ddp else "auto"
         if len(training_args.fsdp) > 0 or deepspeed.is_deepspeed_zero3_enabled():
-            logging.warning(
+            logger.warning(
                 "FSDP or ZeRO3 are incompatible with QLoRA."
             )
 
