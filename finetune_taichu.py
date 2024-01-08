@@ -123,15 +123,37 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: st
     if deepspeed.is_deepspeed_zero3_enabled():
         state_dict = trainer.model_wrapped._zero3_consolidated_16bit_state_dict()
     else:
-        state_dict = trainer.model.state_dict()
-        # if trainer.args.use_lora:
-        #     state_dict = get_peft_state_maybe_zero_3(
-        #         trainer.model.named_parameters(), bias
-        #     )
-        # else:
-        #     state_dict = trainer.model.state_dict()
+        if trainer.args.use_lora:
+            state_dict = get_peft_state_maybe_zero_3(
+                trainer.model.named_parameters(), bias
+            )
+        else:
+            state_dict = trainer.model.state_dict()
     if trainer.args.should_save and trainer.args.local_rank == 0:
         trainer._save(output_dir, state_dict=state_dict)
+
+
+from peft import AutoPeftModelForCausalLM
+from transformers import AutoTokenizer
+
+
+def merge_save_model(path_to_adapter, new_model_directory):
+    model = AutoPeftModelForCausalLM.from_pretrained(
+        path_to_adapter,  # path to the output directory
+        device_map="auto",
+        trust_remote_code=True
+    ).eval()
+
+    merged_model = model.merge_and_unload()
+    # max_shard_size and safe serialization are not necessary.
+    # They respectively work for sharding checkpoint and save the model to safetensors
+    merged_model.save_pretrained(new_model_directory, max_shard_size="2048MB", safe_serialization=True)
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        path_to_adapter,  # path to the output directory
+        trust_remote_code=True
+    )
+    tokenizer.save_pretrained(new_model_directory)
 
 
 def preprocess(
@@ -406,6 +428,8 @@ def train():
     trainer.save_state()
 
     safe_save_model_for_hf_trainer(trainer=trainer, output_dir=training_args.output_path, bias=lora_args.lora_bias)
+
+    merge_save_model(path_to_adapter=training_args.output_path, new_model_directory=training_args.output_path)
 
 
 if __name__ == "__main__":
