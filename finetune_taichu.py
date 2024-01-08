@@ -427,9 +427,11 @@ def train():
     trainer.train()
     trainer.save_state()
 
+    logger.info("=" * 80)
     safe_save_model_for_hf_trainer(trainer=trainer, output_dir=training_args.output_path, bias=lora_args.lora_bias)
-
     merge_save_model(path_to_adapter=training_args.output_path, new_model_directory=training_args.output_path)
+    logger.info("=" * 80)
+    logger.info("[finish] success !!!")
 
 
 if __name__ == "__main__":
