@@ -54,6 +54,10 @@ class TrainingArguments(transformers.TrainingArguments):
         default="./output",
         metadata={"help": "The output directory where the model predictions and checkpoints will be written."},
     )
+    output_dir: str = field(
+        default="./output",
+        metadata={"help": "The output directory where the model predictions and checkpoints will be written."},
+    )
     use_lora: bool = False
 
 
