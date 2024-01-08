@@ -378,4 +378,4 @@ if __name__ == "__main__":
     start = time.time()
     train()
     end = time.time()
-    logger.warning("[time_used] {}".format(end-start))
+    logger.info("[time_used] {}".format(end-start))
