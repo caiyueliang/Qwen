@@ -123,12 +123,13 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: st
     if deepspeed.is_deepspeed_zero3_enabled():
         state_dict = trainer.model_wrapped._zero3_consolidated_16bit_state_dict()
     else:
-        if trainer.args.use_lora:
-            state_dict = get_peft_state_maybe_zero_3(
-                trainer.model.named_parameters(), bias
-            )
-        else:
-            state_dict = trainer.model.state_dict()
+        state_dict = trainer.model.state_dict()
+        # if trainer.args.use_lora:
+        #     state_dict = get_peft_state_maybe_zero_3(
+        #         trainer.model.named_parameters(), bias
+        #     )
+        # else:
+        #     state_dict = trainer.model.state_dict()
     if trainer.args.should_save and trainer.args.local_rank == 0:
         trainer._save(output_dir, state_dict=state_dict)
 
