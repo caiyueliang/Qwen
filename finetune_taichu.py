@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 import json
 import math
 # import logging
+import time
 from loguru import logger
 import os
 from typing import Dict, Optional, List
@@ -374,4 +375,7 @@ def train():
 
 
 if __name__ == "__main__":
+    start = time.time()
     train()
+    end = time.time()
+    logger.warning("[time_used] {}".format(end-start))
