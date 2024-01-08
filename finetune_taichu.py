@@ -289,12 +289,12 @@ def train():
 
     logger.info("=" * 80)
     if data_args.data_path.endswith(".json") is False:
-        logger.info("[data_preprocess] start data_exchange, before: {}".format(data_args.data_path))
+        logger.info("[data_preprocess] start data_path before: {}".format(data_args.data_path))
         data_args.data_path = os.path.join(data_args.data_path, "result.json")
-        logger.info("[data_preprocess] start data_exchange, after: {}".format(data_args.data_path))
+        logger.info("[data_preprocess] start data_path after: {}".format(data_args.data_path))
 
     if data_args.data_exchange is True:
-        logger.info("[data_preprocess] start data_exchange, before: {}".format(data_args.data_path))
+        logger.info("[data_preprocess] start data_path before: {}".format(data_args.data_path))
         from data_preprocess import data_exchange
         replace_dict = {"question": "user", "answer": "assistant"}
 
@@ -307,7 +307,7 @@ def train():
             logger.warning("[data_preprocess] data_path: {}, not end with .json".format(data_args.data_path))
             exit(99)
 
-        logger.info("[data_preprocess] start data_exchange, after: {}".format(data_args.data_path))
+        logger.info("[data_preprocess] start data_path after: {}".format(data_args.data_path))
 
     logger.info("=" * 80)
     # This serves for single-gpu qlora.
