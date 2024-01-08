@@ -6,9 +6,9 @@ from loguru import logger
 
 
 def data_exchange(input_path, output_path, replace_dict):
-    logger.warning("[data_exchange] input_path: {}".format(input_path))
-    logger.warning("[data_exchange] output_path: {}".format(output_path))
-    logger.warning("[data_exchange] replace_dict: {}".format(replace_dict))
+    logger.info("[data_exchange] input_path: {}".format(input_path))
+    logger.info("[data_exchange] output_path: {}".format(output_path))
+    logger.info("[data_exchange] replace_dict: {}".format(replace_dict))
 
     new_data_list = list()
     with open(input_path, mode="r", encoding="utf-8") as fr:
@@ -45,11 +45,11 @@ def data_exchange(input_path, output_path, replace_dict):
             logger.exception(e)
             logger.info("[conversation_text] {}".format(conversation_text))
 
-    logger.warning("[data_preprocess] finish, src_len: {}, dst_len: {}".format(src_len, len(new_data_list)))
+    logger.warning("[data_exchange] finish, src_len: {}, dst_len: {}".format(src_len, len(new_data_list)))
     with open(output_path, mode="w", encoding="utf-8") as fw:
         json.dump(obj=new_data_list, fp=fw, ensure_ascii=False, indent=4)
 
-    logger.warning("[data_preprocess] save finish, output_path: {}".format(output_path))
+    logger.info("[data_exchange] save finish, output_path: {}".format(output_path))
 
 
 def parse_argvs():
