@@ -37,6 +37,7 @@ class DataArguments:
         default=None, metadata={"help": "Path to the evaluation data."}
     )
     lazy_preprocess: bool = False
+    data_exchange: bool = True
 
 
 @dataclass
@@ -274,12 +275,32 @@ def train():
         training_args,
         lora_args,
     ) = parser.parse_args_into_dataclasses()
+
+    logger.info("=" * 80)
     logger.info("[train] parser: {}".format(parser))
-    logger.warning("[train] model_args: {}".format(model_args))
+    logger.info("[train] model_args: {}".format(model_args))
     logger.info("[train] data_args: {}".format(data_args))
     logger.info("[train] training_args: {}".format(training_args))
     logger.info("[train] lora_args: {}".format(lora_args))
 
+    logger.info("=" * 80)
+    if data_args.data_exchange is True:
+        logger.info("[train] start data_exchange, before: {}".format(data_args.data_path))
+        from data_preprocess import data_exchange
+        replace_dict = {"question": "user", "answer": "assistant"}
+
+        if data_args.data_path.endswith(".json"):
+            output_path = data_args.data_path.replace(".json", "_qwen.json")
+
+            data_exchange(input_path=data_args.data_path, output_path=output_path, replace_dict=replace_dict)
+            data_args.data_path = output_path
+        else:
+            logger.warning("[train] data_path: {}, not end with .json".format(data_args.data_path))
+            exit(99)
+
+        logger.info("[train] start data_exchange, after: {}".format(data_args.data_path))
+
+    logger.info("=" * 80)
     # This serves for single-gpu qlora.
     if getattr(training_args, 'deepspeed', None) and int(os.environ.get("WORLD_SIZE", 1))==1:
         training_args.distributed_state.distributed_type = DistributedType.DEEPSPEED
