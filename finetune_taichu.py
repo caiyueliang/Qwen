@@ -266,7 +266,7 @@ class SaveLossCallback(TrainerCallback):
                         'step': int(state.global_step - int(logs['epoch']) * step_per_epoch),
                         'global_step': state.global_step,
                         'loss': logs['loss'],
-                        'learning_rate': logs['learning_rate'],
+                        'lr': logs['learning_rate'],
                         'mean_loss': np.mean(self.loss_list)
                     }
                     logger.info(f"[metrics] {metrics}")
@@ -279,7 +279,6 @@ class SaveLossCallback(TrainerCallback):
             except Exception as e:
                 logger.info(f"[logs] {logs}, [state] {state}")
                 logger.exception(e)
-
 
 
 class LazySupervisedDataset(Dataset):
@@ -348,7 +347,6 @@ def train():
     ) = parser.parse_args_into_dataclasses()
 
     logger.info("=" * 80)
-    logger.info("[train] parser: {}".format(parser))
     logger.info("[train] model_args: {}".format(model_args))
     logger.info("[train] data_args: {}".format(data_args))
     logger.info("[train] training_args: {}".format(training_args))
