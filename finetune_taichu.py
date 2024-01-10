@@ -263,7 +263,7 @@ class PrintLossCallback(TrainerCallback):
                         'mean_loss': np.mean(self.loss_list)
                     }
                     logger.info(f"[metrics] {metrics}")
-                    logger.info(f"[step] {state.global_step}, [loss] {logs['loss']:.4f}, [logs] {logs}, [state] {state}")
+                    # logger.info(f"[step] {state.global_step}, [loss] {logs['loss']:.4f}, [logs] {logs}, [state] {state}")
 
                     self.loss_metrics['train'].append(metrics)
 
