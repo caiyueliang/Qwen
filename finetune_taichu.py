@@ -244,6 +244,8 @@ from transformers.trainer_callback import TrainerCallback
 
 class PrintLossCallback(TrainerCallback):
     loss_list = []
+    loss_metrics = {}
+    loss_file_path = "./loss.json"
 
     def on_log(self, args, state, control, logs=None, **kwargs):
         # 检查logs中是否有loss和step信息，并打印它们
@@ -262,6 +264,11 @@ class PrintLossCallback(TrainerCallback):
                     }
                     logger.info(f"[metrics] {metrics}")
                     logger.info(f"[step] {state.global_step}, [loss] {logs['loss']:.4f}, [logs] {logs}, [state] {state}")
+
+                    self.loss_metrics['train'].append(metrics)
+
+                    with open(self.loss_file_path, 'w', encoding="utf-8") as file:
+                        json.dump(self., file, indent=4, ensure_ascii=False)  # 使用indent参数可选地进行格式化，增加可读性
             except Exception as e:
                 logger.info(f"[logs] {logs}, [state] {state}")
                 logger.exception(e)
