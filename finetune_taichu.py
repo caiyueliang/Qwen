@@ -18,7 +18,7 @@ from transformers import Trainer, GPTQConfig, deepspeed
 from transformers.trainer_pt_utils import LabelSmoother
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from accelerate.utils import DistributedType
-
+from transformers import TrainerState, TrainerControl, PrinterCallback
 
 IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 
@@ -237,6 +237,25 @@ class SupervisedDataset(Dataset):
             attention_mask=self.attention_mask[i],
         )
 
+from transformers.trainer_callback import TrainerCallback
+class MyCustomCallback(TrainerCallback):
+    def on_epoch_end(self, args, state, control, **kwargs):
+        # 自定义在每个epoch结束时执行的操作
+        logger.info(f"Epoch {state.epoch} ended")
+        logger.info("-" * 80)
+
+    def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        logger.info(f"[epoch] {state.epoch}; [global_step] {state.global_step}")
+
+
+class PrintLossCallback(TrainerCallback):
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        # 检查logs中是否有loss和step信息，并打印它们
+        if logs is not None:
+            if "loss" in logs:
+                logger.info(f"Step: {state.global_step}, Loss: {logs['loss']:.4f}")
+
+
 
 class LazySupervisedDataset(Dataset):
     """Dataset for supervised fine-tuning."""
@@ -421,7 +440,7 @@ def train():
 
     # Start trainner
     trainer = Trainer(
-        model=model, tokenizer=tokenizer, args=training_args, **data_module
+        model=model, tokenizer=tokenizer, args=training_args, callbacks=[PrintLossCallback], **data_module
     )
 
     trainer.train()
