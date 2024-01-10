@@ -244,7 +244,7 @@ from transformers.trainer_callback import TrainerCallback
 
 class PrintLossCallback(TrainerCallback):
     loss_list = []
-    loss_metrics = {}
+    loss_metrics = {'train': []}
     loss_file_path = "./loss.json"
 
     def on_log(self, args, state, control, logs=None, **kwargs):
