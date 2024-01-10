@@ -250,6 +250,10 @@ class SaveLossCallback(TrainerCallback):
         self.loss_file = os.path.join(loss_file_path, "loss.json")
         logger.info(f"[SaveLossCallback] loss_file: {self.loss_file}")
 
+    def on_epoch_end(self, args, state, control, **kwargs):
+        # 自定义在每个epoch结束时执行的操作
+        logger.info("-" * 80)
+
     def on_log(self, args, state, control, logs=None, **kwargs):
         # 检查logs中是否有loss和step信息，并打印它们
         if logs is not None:
@@ -275,6 +279,7 @@ class SaveLossCallback(TrainerCallback):
             except Exception as e:
                 logger.info(f"[logs] {logs}, [state] {state}")
                 logger.exception(e)
+
 
 
 class LazySupervisedDataset(Dataset):
