@@ -256,7 +256,7 @@ class PrintLossCallback(TrainerCallback):
                     step_per_epoch = int(state.max_steps / state.num_train_epochs)
                     metrics = {
                         'epoch': int(logs['epoch']) + 1,
-                        'step': state.global_step / step_per_epoch,
+                        'step': state.global_step % step_per_epoch,
                         'global_step': state.global_step,
                         'loss': logs['loss'],
                         'learning_rate': logs['learning_rate'],
