@@ -317,20 +317,20 @@ def train():
         logger.info("[data_preprocess] start data_path after: {}".format(data_args.data_path))
 
     if data_args.data_exchange is True:
-        logger.info("[data_preprocess] start data_path before: {}".format(data_args.data_path))
+        logger.info("[data_exchange] start data_path before: {}".format(data_args.data_path))
         from data_preprocess import data_exchange
         replace_dict = {"question": "user", "answer": "assistant"}
 
         if data_args.data_path.endswith(".json"):
-            output_path = data_args.data_path.replace(".json", "_qwen.json")
+            output_path = "./train_data.json"
 
             data_exchange(input_path=data_args.data_path, output_path=output_path, replace_dict=replace_dict)
             data_args.data_path = output_path
         else:
-            logger.warning("[data_preprocess] data_path: {}, not end with .json".format(data_args.data_path))
+            logger.warning("[data_exchange] data_path: {}, not end with .json".format(data_args.data_path))
             exit(99)
 
-        logger.info("[data_preprocess] start data_path after: {}".format(data_args.data_path))
+        logger.info("[data_exchange] start data_path after: {}".format(data_args.data_path))
 
     logger.info("=" * 80)
     data_args.data_dir = data_args.data_path
