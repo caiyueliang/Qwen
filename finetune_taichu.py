@@ -268,7 +268,7 @@ class PrintLossCallback(TrainerCallback):
                     self.loss_metrics['train'].append(metrics)
 
                     with open(self.loss_file_path, 'w', encoding="utf-8") as file:
-                        json.dump(self.loss_metrics, file, indent=4, ensure_ascii=False)  # 使用indent参数可选地进行格式化，增加可读性
+                        json.dump(self.loss_metrics, file, indent=4, ensure_ascii=False)
             except Exception as e:
                 logger.info(f"[logs] {logs}, [state] {state}")
                 logger.exception(e)
