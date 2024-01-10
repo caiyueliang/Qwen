@@ -241,11 +241,13 @@ import numpy as np
 from transformers.trainer_callback import TrainerCallback
 
 
-
-class PrintLossCallback(TrainerCallback):
-    loss_list = []
-    loss_metrics = {'train': []}
-    loss_file_path = "./loss.json"
+class SaveLossCallback(TrainerCallback):
+    def __init__(self, loss_file_path=None):
+        self.loss_list = []
+        self.loss_metrics = {'train': []}
+        if loss_file_path:
+            os.makedirs(name=loss_file_path, exist_ok=True)
+        self.loss_file = os.path.join(loss_file_path, "loss.json")
 
     def on_log(self, args, state, control, logs=None, **kwargs):
         # 检查logs中是否有loss和step信息，并打印它们
@@ -263,11 +265,11 @@ class PrintLossCallback(TrainerCallback):
                         'mean_loss': np.mean(self.loss_list)
                     }
                     logger.info(f"[metrics] {metrics}")
-                    # logger.info(f"[step] {state.global_step}, [loss] {logs['loss']:.4f}, [logs] {logs}, [state] {state}")
+                    # logger.info(f"[step] {state.global_step}, [loss] {logs['loss']}, [logs] {logs}, [state] {state}")
 
                     self.loss_metrics['train'].append(metrics)
 
-                    with open(self.loss_file_path, 'w', encoding="utf-8") as file:
+                    with open(self.loss_file, 'w', encoding="utf-8") as file:
                         json.dump(self.loss_metrics, file, indent=4, ensure_ascii=False)
             except Exception as e:
                 logger.info(f"[logs] {logs}, [state] {state}")
@@ -455,9 +457,11 @@ def train():
         tokenizer=tokenizer, data_args=data_args, max_len=training_args.model_max_length
     )
 
+    save_loss_callback = SaveLossCallback(loss_file_path=training_args.output_path)
+
     # Start trainner
     trainer = Trainer(
-        model=model, tokenizer=tokenizer, args=training_args, callbacks=[PrintLossCallback], **data_module
+        model=model, tokenizer=tokenizer, args=training_args, callbacks=[save_loss_callback], **data_module
     )
 
     trainer.train()
