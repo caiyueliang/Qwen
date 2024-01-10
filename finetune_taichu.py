@@ -253,7 +253,8 @@ class PrintLossCallback(TrainerCallback):
         # 检查logs中是否有loss和step信息，并打印它们
         if logs is not None:
             if "loss" in logs:
-                logger.info(f"Step: {state.global_step}, Loss: {logs['loss']:.4f}, logs: {logs}")
+                logger.info(f"Step: {state.global_step}, Loss: {logs['loss']:.4f}, logs: {logs}, state: {state}")
+
 
 class LazySupervisedDataset(Dataset):
     """Dataset for supervised fine-tuning."""
