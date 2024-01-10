@@ -237,31 +237,34 @@ class SupervisedDataset(Dataset):
             attention_mask=self.attention_mask[i],
         )
 
+import numpy as np
 from transformers.trainer_callback import TrainerCallback
-class MyCustomCallback(TrainerCallback):
-    def on_epoch_end(self, args, state, control, **kwargs):
-        # 自定义在每个epoch结束时执行的操作
-        logger.info(f"Epoch {state.epoch} ended")
-        logger.info("-" * 80)
 
-    def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
-        logger.info(f"[epoch] {state.epoch}; [global_step] {state.global_step}")
 
 
 class PrintLossCallback(TrainerCallback):
+    loss_list = []
+
     def on_log(self, args, state, control, logs=None, **kwargs):
         # 检查logs中是否有loss和step信息，并打印它们
         if logs is not None:
-            if "loss" in logs:
-                metrics = {
-                    'epoch': logs['epoch'],
-                    'step': state.global_step,
-                    'global_step': state.global_step,
-                    'loss': logs['loss'],
-                    'learning_rate': logs['learning_rate']
-                }
-                logger.info(f"[metrics] {metrics}")
-                logger.info(f"[step] {state.global_step}, [loss] {logs['loss']:.4f}, [logs] {logs}, [state] {state}")
+            try:
+                if "loss" in logs:
+                    self.loss_list.append(float(logs['loss']))
+                    step_per_epoch = int(state.max_steps / state.num_train_epochs)
+                    metrics = {
+                        'epoch': int(logs['epoch']) + 1,
+                        'step': state.global_step / step_per_epoch,
+                        'global_step': state.global_step,
+                        'loss': logs['loss'],
+                        'learning_rate': logs['learning_rate'],
+                        'mean_loss': np.mean(self.loss_list)
+                    }
+                    logger.info(f"[metrics] {metrics}")
+                    logger.info(f"[step] {state.global_step}, [loss] {logs['loss']:.4f}, [logs] {logs}, [state] {state}")
+            except Exception as e:
+                logger.info(f"[logs] {logs}, [state] {state}")
+                logger.exception(e)
 
 
 class LazySupervisedDataset(Dataset):
