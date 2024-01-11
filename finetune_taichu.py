@@ -343,11 +343,11 @@ def train():
             logger.error("[data_exchange] data_path: {}, not end with .json".format(data_args.data_path))
             exit(99)
 
-        logger.info("[data_exchange] start data_path after: {}".format(data_args.data_path))
+        logger.info("[data_exchange] data_path after: {}".format(data_args.data_path))
 
     logger.info("=" * 80)
     data_args.data_dir = data_args.data_path
-    logger.info("[data_preprocess] start data_dir after: {}".format(data_args.data_dir))
+    logger.info("[data_exchange] data_dir after: {}".format(data_args.data_dir))
 
     # This serves for single-gpu qlora.
     if getattr(training_args, 'deepspeed', None) and int(os.environ.get("WORLD_SIZE", 1))==1:
