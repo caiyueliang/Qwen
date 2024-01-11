@@ -315,9 +315,13 @@ def train():
 
     logger.info("=" * 80)
     if data_args.data_path.endswith(".json") is False:
-        logger.info("[data_preprocess] start data_path before: {}".format(data_args.data_path))
+        logger.info("[data_preprocess] data_path before: {}".format(data_args.data_path))
         data_args.data_path = os.path.join(data_args.data_path, "result.json")
-        logger.info("[data_preprocess] start data_path after: {}".format(data_args.data_path))
+        logger.info("[data_preprocess] data_path after: {}".format(data_args.data_path))
+    if data_args.preset_train_data_path and data_args.preset_train_data_path.endswith(".json") is False:
+        logger.info("[data_preprocess] preset_train_data_path before: {}".format(data_args.preset_train_data_path))
+        data_args.preset_train_data_path = os.path.join(data_args.preset_train_data_path, "result.json")
+        logger.info("[data_preprocess] preset_train_data_path after: {}".format(data_args.preset_train_data_path))
 
     if os.path.exists(data_args.data_path) is False:
         logger.error("[data_preprocess] 文件: {}, 不存在".format(data_args.data_path))
