@@ -20,6 +20,7 @@ from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from accelerate.utils import DistributedType
 from transformers import TrainerState, TrainerControl, PrinterCallback
 from utils import SaveLossCallback
+from data_preprocess import data_preprocess
 
 IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 
@@ -39,6 +40,8 @@ class DataArguments:
     )
     lazy_preprocess: bool = False
     data_exchange: bool = True
+    preset_train_data_path: str = None
+    preset_train_data_ratio: float = 1.0
 
 
 @dataclass
@@ -316,18 +319,24 @@ def train():
         data_args.data_path = os.path.join(data_args.data_path, "result.json")
         logger.info("[data_preprocess] start data_path after: {}".format(data_args.data_path))
 
+    if os.path.exists(data_args.data_path) is False:
+        logger.error("[data_preprocess] 文件: {}, 不存在".format(data_args.data_path))
+        exit(99)
+
     if data_args.data_exchange is True:
         logger.info("[data_exchange] start data_path before: {}".format(data_args.data_path))
-        from data_preprocess import data_exchange
         replace_dict = {"question": "user", "answer": "assistant"}
 
         if data_args.data_path.endswith(".json"):
             output_path = "./train_data.json"
-
-            data_exchange(input_path=data_args.data_path, output_path=output_path, replace_dict=replace_dict)
+            data_preprocess(input_path=data_args.data_path,
+                            output_path=output_path,
+                            replace_dict=replace_dict,
+                            preset_data_path=data_args.preset_train_data_path,
+                            preset_data_ratio=data_args.preset_train_data_ratio)
             data_args.data_path = output_path
         else:
-            logger.warning("[data_exchange] data_path: {}, not end with .json".format(data_args.data_path))
+            logger.error("[data_exchange] data_path: {}, not end with .json".format(data_args.data_path))
             exit(99)
 
         logger.info("[data_exchange] start data_path after: {}".format(data_args.data_path))
