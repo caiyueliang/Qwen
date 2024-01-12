@@ -118,7 +118,7 @@ local_rank = None
 
 def rank0_print(*args):
     if local_rank == 0:
-        logger.warning(*args)
+        logger.info(*args)
 
 
 def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: str, bias="none"):
@@ -310,28 +310,28 @@ def train():
         lora_args,
     ) = parser.parse_args_into_dataclasses()
 
-    logger.info("=" * 80)
-    logger.info("[train] model_args: {}".format(model_args))
-    logger.info("[train] data_args: {}".format(data_args))
-    logger.info("[train] training_args: {}".format(training_args))
-    logger.info("[train] lora_args: {}".format(lora_args))
+    rank0_print("=" * 80)
+    rank0_print("[train] model_args: {}".format(model_args))
+    rank0_print("[train] data_args: {}".format(data_args))
+    rank0_print("[train] training_args: {}".format(training_args))
+    rank0_print("[train] lora_args: {}".format(lora_args))
 
-    logger.info("=" * 80)
+    rank0_print("=" * 80)
     if data_args.data_path.endswith(".json") is False:
-        logger.info("[data_preprocess] data_path before: {}".format(data_args.data_path))
+        rank0_print("[data_preprocess] data_path before: {}".format(data_args.data_path))
         data_args.data_path = os.path.join(data_args.data_path, "result.json")
-        logger.info("[data_preprocess] data_path after: {}".format(data_args.data_path))
+        rank0_print("[data_preprocess] data_path after: {}".format(data_args.data_path))
     if data_args.preset_train_data_path and data_args.preset_train_data_path.endswith(".json") is False:
-        logger.info("[data_preprocess] preset_train_data_path before: {}".format(data_args.preset_train_data_path))
+        rank0_print("[data_preprocess] preset_train_data_path before: {}".format(data_args.preset_train_data_path))
         data_args.preset_train_data_path = os.path.join(data_args.preset_train_data_path, "result.json")
-        logger.info("[data_preprocess] preset_train_data_path after: {}".format(data_args.preset_train_data_path))
+        rank0_print("[data_preprocess] preset_train_data_path after: {}".format(data_args.preset_train_data_path))
 
     if os.path.exists(data_args.data_path) is False:
-        logger.error("[data_preprocess] 文件: {}, 不存在".format(data_args.data_path))
+        rank0_print("[data_preprocess] 文件: {}, 不存在".format(data_args.data_path))
         exit(99)
 
     if data_args.data_exchange is True:
-        logger.info("[data_exchange] start data_path before: {}".format(data_args.data_path))
+        rank0_print("[data_exchange] start data_path before: {}".format(data_args.data_path))
         replace_dict = {"question": "user", "answer": "assistant"}
 
         if data_args.data_path.endswith(".json"):
@@ -343,14 +343,14 @@ def train():
                             preset_data_ratio=data_args.preset_train_data_ratio)
             data_args.data_path = output_path
         else:
-            logger.error("[data_exchange] data_path: {}, not end with .json".format(data_args.data_path))
+            rank0_print("[data_exchange] data_path: {}, 没有以 .json 结尾".format(data_args.data_path))
             exit(99)
 
-        logger.info("[data_exchange] data_path after: {}".format(data_args.data_path))
+        rank0_print("[data_exchange] data_path after: {}".format(data_args.data_path))
 
-    logger.info("=" * 80)
+    rank0_print("=" * 80)
     data_args.data_dir = data_args.data_path
-    logger.info("[data_exchange] data_dir after: {}".format(data_args.data_dir))
+    rank0_print("[data_exchange] data_dir after: {}".format(data_args.data_dir))
 
     # This serves for single-gpu qlora.
     if getattr(training_args, 'deepspeed', None) and int(os.environ.get("WORLD_SIZE", 1))==1:
@@ -448,16 +448,16 @@ def train():
     trainer.train()
     trainer.save_state()
 
-    logger.info("=" * 80)
-    logger.info("[save_model] start")
+    rank0_print("=" * 80)
+    rank0_print("[save_model] start")
     tmp_output_path = os.path.join(training_args.output_path, "tmp")
     safe_save_model_for_hf_trainer(trainer=trainer, output_dir=tmp_output_path, bias=lora_args.lora_bias)
     merge_save_model(trainer=trainer,
                      path_to_adapter=tmp_output_path,
                      new_model_directory=training_args.output_path,
                      device_map=device_map)
-    logger.info("=" * 80)
-    logger.info("[train] finish !!!")
+    rank0_print("=" * 80)
+    rank0_print("[train] finish !!!")
 
 
 if __name__ == "__main__":
