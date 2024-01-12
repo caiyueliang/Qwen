@@ -464,4 +464,4 @@ if __name__ == "__main__":
     start = time.time()
     train()
     end = time.time()
-    logger.info("[time_used] {}".format(end-start))
+    rank0_print("[time_used] {}".format(end-start))
