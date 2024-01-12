@@ -69,7 +69,7 @@ DISTRIBUTED_ARGS="
     --master_port $MASTER_PORT
 "
 
-echo "${DISTRIBUTED_ARGS}"
+echo "[DISTRIBUTED_ARGS] ${DISTRIBUTED_ARGS}"
 
 torchrun $DISTRIBUTED_ARGS finetune.py \
     --model_name_or_path $MODEL \
