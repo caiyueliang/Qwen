@@ -310,6 +310,9 @@ def train():
         lora_args,
     ) = parser.parse_args_into_dataclasses()
 
+    local_rank = training_args.local_rank
+    logger.info("[local_rank] {}".format(local_rank))
+
     rank0_print("=" * 80)
     rank0_print("[train] model_args: {}".format(model_args))
     rank0_print("[train] data_args: {}".format(data_args))
@@ -355,9 +358,6 @@ def train():
     # This serves for single-gpu qlora.
     if getattr(training_args, 'deepspeed', None) and int(os.environ.get("WORLD_SIZE", 1))==1:
         training_args.distributed_state.distributed_type = DistributedType.DEEPSPEED
-
-    local_rank = training_args.local_rank
-    logger.info("[local_rank] {}".format(local_rank))
 
     # device_map = "auto"
     device_map = None
