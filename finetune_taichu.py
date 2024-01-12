@@ -141,10 +141,10 @@ from peft import AutoPeftModelForCausalLM
 from transformers import AutoTokenizer
 
 
-def merge_save_model(path_to_adapter, new_model_directory):
+def merge_save_model(path_to_adapter, new_model_directory, device_map):
     model = AutoPeftModelForCausalLM.from_pretrained(
         path_to_adapter,  # path to the output directory
-        device_map="auto",
+        device_map=device_map,
         trust_remote_code=True
     ).eval()
 
@@ -448,7 +448,9 @@ def train():
     logger.info("[save_model] start")
     tmp_output_path = os.path.join(training_args.output_path, "tmp")
     safe_save_model_for_hf_trainer(trainer=trainer, output_dir=tmp_output_path, bias=lora_args.lora_bias)
-    merge_save_model(path_to_adapter=tmp_output_path, new_model_directory=training_args.output_path)
+    merge_save_model(path_to_adapter=tmp_output_path,
+                     new_model_directory=training_args.output_path,
+                     device_map=device_map)
     logger.info("=" * 80)
     logger.info("[train] finish !!!")
 
