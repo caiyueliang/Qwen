@@ -143,6 +143,7 @@ from transformers import AutoTokenizer
 
 def merge_save_model(trainer: transformers.Trainer, path_to_adapter, new_model_directory, device_map):
     if trainer.args.should_save and trainer.args.local_rank == 0:
+        logger.info("[merge_save_model] start")
         model = AutoPeftModelForCausalLM.from_pretrained(
             path_to_adapter,  # path to the output directory
             device_map=device_map,
@@ -159,6 +160,7 @@ def merge_save_model(trainer: transformers.Trainer, path_to_adapter, new_model_d
             trust_remote_code=True
         )
         tokenizer.save_pretrained(new_model_directory)
+        logger.info("[merge_save_model] end")
 
 
 def preprocess(
