@@ -445,8 +445,8 @@ def train():
 
     logger.info("=" * 80)
     logger.info("[save_model] start")
-    safe_save_model_for_hf_trainer(trainer=trainer, output_dir=training_args.output_path, bias=lora_args.lora_bias)
-    merge_save_model(path_to_adapter=training_args.output_path, new_model_directory=training_args.output_path)
+    safe_save_model_for_hf_trainer(trainer=trainer, output_dir="./output_temp/", bias=lora_args.lora_bias)
+    merge_save_model(path_to_adapter="./output_temp/", new_model_directory=training_args.output_path)
     logger.info("=" * 80)
     logger.info("[train] finish !!!")
 
