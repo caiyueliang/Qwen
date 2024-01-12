@@ -141,23 +141,24 @@ from peft import AutoPeftModelForCausalLM
 from transformers import AutoTokenizer
 
 
-def merge_save_model(path_to_adapter, new_model_directory, device_map):
-    model = AutoPeftModelForCausalLM.from_pretrained(
-        path_to_adapter,  # path to the output directory
-        device_map=device_map,
-        trust_remote_code=True
-    ).eval()
+def merge_save_model(trainer: transformers.Trainer, path_to_adapter, new_model_directory, device_map):
+    if trainer.args.should_save and trainer.args.local_rank == 0:
+        model = AutoPeftModelForCausalLM.from_pretrained(
+            path_to_adapter,  # path to the output directory
+            device_map=device_map,
+            trust_remote_code=True
+        ).eval()
 
-    merged_model = model.merge_and_unload()
-    # max_shard_size and safe serialization are not necessary.
-    # They respectively work for sharding checkpoint and save the model to safetensors
-    merged_model.save_pretrained(new_model_directory, max_shard_size="2048MB", safe_serialization=True)
+        merged_model = model.merge_and_unload()
+        # max_shard_size and safe serialization are not necessary.
+        # They respectively work for sharding checkpoint and save the model to safetensors
+        merged_model.save_pretrained(new_model_directory, max_shard_size="2048MB", safe_serialization=True)
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        path_to_adapter,  # path to the output directory
-        trust_remote_code=True
-    )
-    tokenizer.save_pretrained(new_model_directory)
+        tokenizer = AutoTokenizer.from_pretrained(
+            path_to_adapter,  # path to the output directory
+            trust_remote_code=True
+        )
+        tokenizer.save_pretrained(new_model_directory)
 
 
 def preprocess(
@@ -354,6 +355,7 @@ def train():
         training_args.distributed_state.distributed_type = DistributedType.DEEPSPEED
 
     local_rank = training_args.local_rank
+    logger.info("[local_rank] {}".format(local_rank))
 
     # device_map = "auto"
     device_map = None
@@ -448,7 +450,8 @@ def train():
     logger.info("[save_model] start")
     tmp_output_path = os.path.join(training_args.output_path, "tmp")
     safe_save_model_for_hf_trainer(trainer=trainer, output_dir=tmp_output_path, bias=lora_args.lora_bias)
-    merge_save_model(path_to_adapter=tmp_output_path,
+    merge_save_model(trainer=trainer,
+                     path_to_adapter=tmp_output_path,
                      new_model_directory=training_args.output_path,
                      device_map=device_map)
     logger.info("=" * 80)
