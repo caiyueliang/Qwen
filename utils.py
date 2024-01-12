@@ -65,7 +65,7 @@ class SaveLossCallback(TrainerCallback):
 
     def on_log(self, args, state, control, logs=None, **kwargs):
         # 检查logs中是否有loss和step信息，并打印它们
-        if logs is not None:
+        if logs is not None and args.local_rank == 0:
             try:
                 if "loss" in logs:
                     self.loss_list.append(float(logs['loss']))
