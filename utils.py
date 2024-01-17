@@ -1,7 +1,6 @@
 import torch
 from transformers import AutoModelForCausalLM
 from accelerate import dispatch_model
-from finetune_taichu import DataArguments, TrainingArguments
 
 def _device_map(num_gpus, num_layers):
     per_gpu_layers = (num_layers + 2) / num_gpus
@@ -89,20 +88,3 @@ class SaveLossCallback(TrainerCallback):
                 logger.info(f"[on_log][logs] {logs}, [state] {state}")
                 logger.exception(e)
 
-
-def train_params_preprocess(training_args:TrainingArguments, data_args: DataArguments) -> TrainingArguments:
-    with open(data_args.data_path, mode="r", encoding="utf-8") as fr:
-        train_data_list = json.load(fp=fr)
-
-        if len(train_data_list) <= 20:
-            training_args.gradient_accumulation_steps = 1
-        elif len(train_data_list) <= 50:
-            training_args.gradient_accumulation_steps = 2
-        elif len(train_data_list) <= 100:
-            training_args.gradient_accumulation_steps = 4
-        else:
-            training_args.gradient_accumulation_steps = 8
-
-    logger.warning("[train_params_preprocess] train_data_len: {}, gradient_accumulation_steps: {}".format(
-        len(train_data_list), training_args.gradient_accumulation_steps))
-    return training_args

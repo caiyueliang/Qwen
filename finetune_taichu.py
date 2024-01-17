@@ -19,7 +19,7 @@ from transformers.trainer_pt_utils import LabelSmoother
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from accelerate.utils import DistributedType
 from transformers import TrainerState, TrainerControl, PrinterCallback
-from utils import SaveLossCallback, train_params_preprocess
+from utils import SaveLossCallback
 from data_preprocess import data_preprocess
 
 IGNORE_TOKEN_ID = LabelSmoother.ignore_index
@@ -297,12 +297,37 @@ def make_supervised_data_module(
     return dict(train_dataset=train_dataset, eval_dataset=eval_dataset)
 
 
+def train_params_preprocess(training_args:TrainingArguments, data_args: DataArguments) -> TrainingArguments:
+    try:
+        with open(data_args.data_path, mode="r", encoding="utf-8") as fr:
+            train_data_list = json.load(fp=fr)
+            training_args._frozen = False
+            if len(train_data_list) <= 20:
+                training_args.gradient_accumulation_steps = 1
+            elif len(train_data_list) <= 50:
+                training_args.gradient_accumulation_steps = 2
+            elif len(train_data_list) <= 100:
+                training_args.gradient_accumulation_steps = 4
+            else:
+                training_args.gradient_accumulation_steps = 8
+            training_args._frozen = True
+
+        logger.info("[train_params_preprocess] train_data_len: {}, gradient_accumulation_steps: {}".format(
+            len(train_data_list), training_args.gradient_accumulation_steps))
+    except Exception as e:
+        logger.exception(e)
+
+    return training_args
+
+
 def train():
     global local_rank
 
     parser = transformers.HfArgumentParser(
         (ModelArguments, DataArguments, TrainingArguments, LoraArguments)
     )
+    logger.info("=" * 80)
+    logger.info("[train] parser: {}".format(parser))
     (
         model_args,
         data_args,
@@ -311,6 +336,7 @@ def train():
     ) = parser.parse_args_into_dataclasses()
 
     local_rank = training_args.local_rank
+    rank0_print("=" * 80)
     logger.info("[local_rank] {}".format(local_rank))
 
     rank0_print("=" * 80)
@@ -358,9 +384,10 @@ def train():
     rank0_print("=" * 80)
     rank0_print("[train][train_params_preprocess] start")
     training_args = train_params_preprocess(training_args=training_args, data_args=data_args)
-    rank0_print("[train][train_params_preprocess] end, training_args: {}".format(
+    rank0_print("[train][train_params_preprocess] end, gradient_accumulation_steps: {}".format(
         training_args.gradient_accumulation_steps))
 
+    rank0_print("=" * 80)
     # This serves for single-gpu qlora.
     if getattr(training_args, 'deepspeed', None) and int(os.environ.get("WORLD_SIZE", 1))==1:
         training_args.distributed_state.distributed_type = DistributedType.DEEPSPEED
