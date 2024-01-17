@@ -19,7 +19,7 @@ from transformers.trainer_pt_utils import LabelSmoother
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from accelerate.utils import DistributedType
 from transformers import TrainerState, TrainerControl, PrinterCallback
-from utils import SaveLossCallback
+from utils import SaveLossCallback, train_params_preprocess
 from data_preprocess import data_preprocess
 
 IGNORE_TOKEN_ID = LabelSmoother.ignore_index
@@ -354,6 +354,12 @@ def train():
     rank0_print("=" * 80)
     data_args.data_dir = data_args.data_path
     rank0_print("[data_exchange] data_dir after: {}".format(data_args.data_dir))
+
+    rank0_print("=" * 80)
+    rank0_print("[train][train_params_preprocess] start")
+    training_args = train_params_preprocess(training_args=training_args, data_args=data_args)
+    rank0_print("[train][train_params_preprocess] end, training_args: {}".format(
+        training_args.gradient_accumulation_steps))
 
     # This serves for single-gpu qlora.
     if getattr(training_args, 'deepspeed', None) and int(os.environ.get("WORLD_SIZE", 1))==1:
