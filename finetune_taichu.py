@@ -17,8 +17,8 @@ import transformers
 from transformers import Trainer, GPTQConfig, deepspeed
 from transformers.trainer_pt_utils import LabelSmoother
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from transformers import TrainerState, TrainerControl, PrinterCallback, ProgressCallback
 from accelerate.utils import DistributedType
-from transformers import TrainerState, TrainerControl, PrinterCallback
 from utils import SaveLossCallback
 from data_preprocess import data_preprocess
 
@@ -63,6 +63,7 @@ class TrainingArguments(transformers.TrainingArguments):
         metadata={"help": "The output directory where the model predictions and checkpoints will be written."},
     )
     use_lora: bool = False
+    logging_first_step: bool = field(default=True, metadata={"help": "Log the first global_step"})
 
 
 @dataclass
@@ -470,13 +471,18 @@ def train():
         tokenizer=tokenizer, data_args=data_args, max_len=training_args.model_max_length
     )
 
-    save_loss_callback = SaveLossCallback(
-        loss_file_path=os.path.join(training_args.output_path, "metrics"))
-
     # Start trainner
     trainer = Trainer(
-        model=model, tokenizer=tokenizer, args=training_args, callbacks=[save_loss_callback], **data_module
+        model=model, tokenizer=tokenizer, args=training_args, **data_module
     )
+
+    # delete useless callback
+    trainer.pop_callback(callback=PrinterCallback)
+    trainer.pop_callback(callback=ProgressCallback)
+    # add custom callback
+    save_loss_callback = SaveLossCallback(
+        loss_file_path=os.path.join(training_args.output_path, "metrics"))
+    trainer.add_callback(callback=save_loss_callback)
 
     trainer.train()
     trainer.save_state()

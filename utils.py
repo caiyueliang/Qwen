@@ -57,10 +57,12 @@ class SaveLossCallback(TrainerCallback):
             os.makedirs(name=loss_file_path, exist_ok=True)
         self.loss_file = os.path.join(loss_file_path, "loss.json")
         logger.info(f"[SaveLossCallback] loss_file: {self.loss_file}")
+        # print(f"[SaveLossCallback] loss_file: {self.loss_file}", flush=True)
 
     def on_epoch_end(self, args, state, control, **kwargs):
         # 自定义在每个epoch结束时执行的操作
         logger.info("-" * 80)
+        # print("-" * 80, flush=True)
 
     def on_log(self, args, state, control, logs=None, **kwargs):
         # 检查logs中是否有loss和step信息，并打印它们
@@ -78,7 +80,7 @@ class SaveLossCallback(TrainerCallback):
                         'mean_loss': np.mean(self.loss_list)
                     }
                     logger.info(f"[metrics] {metrics}")
-                    # logger.info(f"[step] {state.global_step}, [loss] {logs['loss']}, [logs] {logs}, [state] {state}")
+                    # print(f"[metrics] global_step: {metrics['global_step']}, loss: {metrics['loss']}, lr: {metrics['lr']}, mean_loss: {metrics['mean_loss']}", flush=True)
 
                     self.loss_metrics['train'].append(metrics)
 
