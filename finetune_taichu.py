@@ -303,14 +303,15 @@ def train_params_preprocess(training_args:TrainingArguments, data_args: DataArgu
         with open(data_args.data_path, mode="r", encoding="utf-8") as fr:
             train_data_list = json.load(fp=fr)
             training_args._frozen = False
-            if len(train_data_list) <= 20:
-                training_args.gradient_accumulation_steps = 1
-            elif len(train_data_list) <= 50:
-                training_args.gradient_accumulation_steps = 2
-            elif len(train_data_list) <= 100:
-                training_args.gradient_accumulation_steps = 4
-            else:
-                training_args.gradient_accumulation_steps = 8
+            # if len(train_data_list) <= 20:
+            #     training_args.gradient_accumulation_steps = 1
+            # elif len(train_data_list) <= 50:
+            #     training_args.gradient_accumulation_steps = 2
+            # elif len(train_data_list) <= 100:
+            #     training_args.gradient_accumulation_steps = 4
+            # else:
+            #     training_args.gradient_accumulation_steps = 8
+            training_args.gradient_accumulation_steps = 1
             training_args._frozen = True
 
         logger.info("[train_params_preprocess] train_data_len: {}, gradient_accumulation_steps: {}".format(
