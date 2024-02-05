@@ -27,8 +27,8 @@ IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 
 @dataclass
 class ModelArguments:
-    model_name_or_path: Optional[str] = field(default="Qwen/Qwen-7B")
-    pretrained_model_path: Optional[str] = field(default="Qwen/Qwen-7B")
+    model_name_or_path: Optional[str] = field(default="Taichu_1.8B_Chat")
+    pretrained_model_path: Optional[str] = field(default="Taichu_1.8B_Chat")
 
 @dataclass
 class DataArguments:
