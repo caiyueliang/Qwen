@@ -76,8 +76,8 @@ class SaveLossCallback(TrainerCallback):
                     cur_epoch += 1
                     metrics = {
                         'epoch': cur_epoch,
-                        'global_step': state.global_step,
                         'step': int(state.global_step - (cur_epoch - 1) * step_per_epoch),
+                        'global_step': state.global_step,
                         'loss': logs['loss'],
                         'lr': logs['learning_rate'],
                         'mean_loss': np.mean(self.loss_list)
@@ -92,29 +92,4 @@ class SaveLossCallback(TrainerCallback):
                 logger.info(f"[on_log][logs] {logs}, [state] {state}")
                 logger.exception(e)
 
-    # def on_log(self, args, state, control, logs=None, **kwargs):
-    #     # 检查logs中是否有loss和step信息，并打印它们
-    #     if logs is not None and args.local_rank == 0:
-    #         try:
-    #             if "loss" in logs:
-    #                 self.loss_list.append(float(logs['loss']))
-    #                 step_per_epoch = int(state.max_steps / state.num_train_epochs)
-    #                 metrics = {
-    #                     'epoch': int(logs['epoch']) + 1,
-    #                     'step': int(state.global_step - int(logs['epoch']) * step_per_epoch),
-    #                     'global_step': state.global_step,
-    #                     'loss': logs['loss'],
-    #                     'lr': logs['learning_rate'],
-    #                     'mean_loss': np.mean(self.loss_list)
-    #                 }
-    #                 logger.info(f"[metrics] {metrics}")
-    #                 # print(f"[metrics] global_step: {metrics['global_step']}, loss: {metrics['loss']}, lr: {metrics['lr']}, mean_loss: {metrics['mean_loss']}", flush=True)
-    #
-    #                 self.loss_metrics['train'].append(metrics)
-    #
-    #                 with open(self.loss_file, 'w', encoding="utf-8") as file:
-    #                     json.dump(self.loss_metrics, file, indent=4, ensure_ascii=False)
-    #         except Exception as e:
-    #             logger.info(f"[on_log][logs] {logs}, [state] {state}")
-    #             logger.exception(e)
 
