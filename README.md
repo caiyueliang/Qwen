@@ -11,7 +11,7 @@
 <p align="center">
         🤗 <a href="https://huggingface.co/Qwen">Hugging Face</a>&nbsp&nbsp | &nbsp&nbsp🤖 <a href="https://modelscope.cn/organization/qwen">ModelScope</a>&nbsp&nbsp | &nbsp&nbsp 📑 <a href="https://arxiv.org/abs/2309.16609">Paper</a> &nbsp&nbsp ｜ &nbsp&nbsp🖥️ <a href="https://modelscope.cn/studios/qwen/Qwen-72B-Chat-Demo/summary">Demo</a>
 <br>
-<a href="assets/wechat.png">WeChat (微信)</a>&nbsp&nbsp | &nbsp&nbsp<a href="https://discord.gg/z3GAxXZ9Ce">Discord</a>&nbsp&nbsp ｜  &nbsp&nbsp<a href="https://dashscope.aliyun.com">API</a> 
+<a href="assets/wechat.png">WeChat (微信)</a>&nbsp&nbsp | &nbsp&nbsp<a href="https://discord.gg/zmemtgyAxT">Discord</a>&nbsp&nbsp ｜  &nbsp&nbsp<a href="https://dashscope.aliyun.com">API</a> 
 </p>
 <br><br>
 
@@ -267,6 +267,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import GenerationConfig
 from qwen_generation_utils import make_context, decode_tokens, get_stop_words_ids
 
+# To generate attention masks automatically, it is necessary to assign distinct
+# token_ids to pad_token and eos_token, and set pad_token_id in the generation_config.
 tokenizer = AutoTokenizer.from_pretrained(
     './',
     pad_token='<|extra_0|>',
@@ -451,7 +453,7 @@ We illustrate the model performance of both BF16, Int8 and Int4 models on the be
 ### Quantization of KV cache
 
 > NOTE: Please be aware that due to the internal mechanism of Hugging Face, the support files for this functionality 
-> (i.e., `cache_autogptq_cuda_256.cpp` and `cache_autogptq_cuda_kernel_245.cu`) may be missing. Please manually download
+> (i.e., `cache_autogptq_cuda_256.cpp` and `cache_autogptq_cuda_kernel_256.cu`) may be missing. Please manually download
 > them from the Hugging Face Hub and place them into the same folder as the other module files.
 
 The attention KV cache can be quantized and compressed for storage, to get a higher sample throughput. The arguments `use_cache_quantization` and `use_cache_kernel` in `config.json` are provided to enable KV cache quantization. The specific use method is as follows:
@@ -691,6 +693,8 @@ model = AutoPeftModelForCausalLM.from_pretrained(
 ).eval()
 ```
 
+> NOTE: If `peft>=0.8.0`, it will try to load the tokenizer as well, however, initialized without `trust_remote_code=True`, leading to `ValueError: Tokenizer class QWenTokenizer does not exist or is not currently imported.` Currently, you could downgrade `peft<0.8.0` or move tokenizer files elsewhere to workaround this issue.
+
 If you want to merge the adapters and save the finetuned model as a standalone model (you can only do this with LoRA, and you CANNOT merge the parameters from Q-LoRA), you can run the following codes:
 
 ```python
@@ -779,7 +783,6 @@ Our provided scripts support multinode finetuning. You can refer to the comments
 Note: DeepSpeed ZeRO 3 requires much greater inter-node communication rate than ZeRO 2, which will significantly reduce the training speed in the case of multinode finetuning. Therefore, we do not recommend using DeepSpeed ZeRO 3 configurations in multinode finetuning scripts.
 
 ### Profiling of Memory and Speed
-
 We profile the GPU memory and training speed of both LoRA (LoRA (emb) refers to training the embedding and output layer, while LoRA has no trainable embedding and output layer) and Q-LoRA in the setup of single-GPU training. In this test, we experiment on a single A100-SXM4-80G GPU, and we use CUDA 11.8 and Pytorch 2.0. Flash attention 2 is applied. We uniformly use a batch size of 1 and gradient accumulation of 8. We profile the memory (GB) and speed (s/iter) of inputs of different lengths, namely 256, 512, 1024, 2048, 4096, and 8192. We also report the statistics of full-parameter finetuning with Qwen-7B on 2 A100 GPUs. We only report the statistics of 256, 512, and 1024 tokens due to the limitation of GPU memory. 
 
 For Qwen-7B, we also test the performance of multinode finetuning. We experiment using two servers, each containing two A100-SXM4-80G GPUs, and the rest of configurations are the same as other Qwen-7B experiments. The results of multinode finetuning are marked as LoRA (multinode) in the table.
@@ -871,7 +874,6 @@ The statistics are listed below:
 </table>
 
 <br>
-
 
 ## Deployment
 
@@ -1049,6 +1051,7 @@ To simplify the deployment process, we provide docker images with pre-built envi
 1. Install the correct version of Nvidia driver depending on the image to use:
   - `qwenllm/qwen:cu117` (**recommend**): `>= 515.48.07`
   - `qwenllm/qwen:cu114` (w/o flash-attention): `>= 470.82.01`
+  - `qwenllm/qwen:cu121`: `>= 530.30.02`
   - `qwenllm/qwen:latest`: same as `qwenllm/qwen:cu117`
 
 2. Install and configure [docker](https://docs.docker.com/engine/install/) and [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html):
