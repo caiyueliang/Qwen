@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 import json
 import math
 # import logging
+import time
 from loguru import logger
 import os
 from typing import Dict, Optional, List
@@ -16,16 +17,18 @@ import transformers
 from transformers import Trainer, GPTQConfig, deepspeed
 from transformers.trainer_pt_utils import LabelSmoother
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from transformers import TrainerState, TrainerControl, PrinterCallback, ProgressCallback
 from accelerate.utils import DistributedType
-
+from utils import SaveLossCallback
+from data_preprocess import data_preprocess
 
 IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 
 
 @dataclass
 class ModelArguments:
-    model_name_or_path: Optional[str] = field(default="Qwen/Qwen-7B")
-
+    model_name_or_path: Optional[str] = field(default="Taichu_1.8B_Chat")
+    pretrained_model_path: Optional[str] = field(default="Taichu_1.8B_Chat")
 
 @dataclass
 class DataArguments:
@@ -36,6 +39,9 @@ class DataArguments:
         default=None, metadata={"help": "Path to the evaluation data."}
     )
     lazy_preprocess: bool = False
+    data_exchange: bool = True
+    preset_train_data_path: str = None
+    preset_train_data_ratio: float = 1.0
 
 
 @dataclass
@@ -48,7 +54,16 @@ class TrainingArguments(transformers.TrainingArguments):
             "help": "Maximum sequence length. Sequences will be right padded (and possibly truncated)."
         },
     )
+    output_path: str = field(
+        default="./output",
+        metadata={"help": "The output directory where the model predictions and checkpoints will be written."},
+    )
+    output_dir: str = field(
+        default="./output",
+        metadata={"help": "The output directory where the model predictions and checkpoints will be written."},
+    )
     use_lora: bool = False
+    logging_first_step: bool = field(default=True, metadata={"help": "Log the first global_step"})
 
 
 @dataclass
@@ -104,7 +119,7 @@ local_rank = None
 
 def rank0_print(*args):
     if local_rank == 0:
-        logger.warning(*args)
+        logger.info(*args)
 
 
 def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: str, bias="none"):
@@ -121,6 +136,32 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: st
             state_dict = trainer.model.state_dict()
     if trainer.args.should_save and trainer.args.local_rank == 0:
         trainer._save(output_dir, state_dict=state_dict)
+
+
+from peft import AutoPeftModelForCausalLM
+from transformers import AutoTokenizer
+
+
+def merge_save_model(trainer: transformers.Trainer, path_to_adapter, new_model_directory, device_map):
+    if trainer.args.should_save and trainer.args.local_rank == 0:
+        logger.info("[merge_save_model] start")
+        model = AutoPeftModelForCausalLM.from_pretrained(
+            path_to_adapter,  # path to the output directory
+            device_map=device_map,
+            trust_remote_code=True
+        ).eval()
+
+        merged_model = model.merge_and_unload()
+        # max_shard_size and safe serialization are not necessary.
+        # They respectively work for sharding checkpoint and save the model to safetensors
+        merged_model.save_pretrained(new_model_directory, max_shard_size="2048MB", safe_serialization=True)
+
+        tokenizer = AutoTokenizer.from_pretrained(
+            path_to_adapter,  # path to the output directory
+            trust_remote_code=True
+        )
+        tokenizer.save_pretrained(new_model_directory)
+        logger.info("[merge_save_model] end")
 
 
 def preprocess(
@@ -257,30 +298,103 @@ def make_supervised_data_module(
     return dict(train_dataset=train_dataset, eval_dataset=eval_dataset)
 
 
+def train_params_preprocess(training_args:TrainingArguments, data_args: DataArguments) -> TrainingArguments:
+    try:
+        with open(data_args.data_path, mode="r", encoding="utf-8") as fr:
+            train_data_list = json.load(fp=fr)
+            training_args._frozen = False
+            # if len(train_data_list) <= 20:
+            #     training_args.gradient_accumulation_steps = 1
+            # elif len(train_data_list) <= 50:
+            #     training_args.gradient_accumulation_steps = 2
+            # elif len(train_data_list) <= 100:
+            #     training_args.gradient_accumulation_steps = 4
+            # else:
+            #     training_args.gradient_accumulation_steps = 8
+            training_args.gradient_accumulation_steps = 1
+            training_args._frozen = True
+
+        logger.info("[train_params_preprocess] train_data_len: {}, gradient_accumulation_steps: {}".format(
+            len(train_data_list), training_args.gradient_accumulation_steps))
+    except Exception as e:
+        logger.exception(e)
+
+    return training_args
+
+
 def train():
     global local_rank
 
     parser = transformers.HfArgumentParser(
         (ModelArguments, DataArguments, TrainingArguments, LoraArguments)
     )
+    logger.info("=" * 80)
+    logger.info("[train] parser: {}".format(parser))
     (
         model_args,
         data_args,
         training_args,
         lora_args,
     ) = parser.parse_args_into_dataclasses()
-    logger.info("[train] parser: {}".format(parser))
-    logger.warning("[train] model_args: {}".format(model_args))
-    logger.info("[train] data_args: {}".format(data_args))
-    logger.info("[train] training_args: {}".format(training_args))
-    logger.info("[train] lora_args: {}".format(lora_args))
 
+    local_rank = training_args.local_rank
+    rank0_print("=" * 80)
+    logger.info("[local_rank] {}".format(local_rank))
+
+    rank0_print("=" * 80)
+    rank0_print("[train] model_args: {}".format(model_args))
+    rank0_print("[train] data_args: {}".format(data_args))
+    rank0_print("[train] training_args: {}".format(training_args))
+    rank0_print("[train] lora_args: {}".format(lora_args))
+
+    rank0_print("=" * 80)
+    if data_args.data_path.endswith(".json") is False:
+        rank0_print("[data_preprocess] data_path before: {}".format(data_args.data_path))
+        data_args.data_path = os.path.join(data_args.data_path, "result.json")
+        rank0_print("[data_preprocess] data_path after: {}".format(data_args.data_path))
+    if data_args.preset_train_data_path and data_args.preset_train_data_path.endswith(".json") is False:
+        rank0_print("[data_preprocess] preset_train_data_path before: {}".format(data_args.preset_train_data_path))
+        data_args.preset_train_data_path = os.path.join(data_args.preset_train_data_path, "result.json")
+        rank0_print("[data_preprocess] preset_train_data_path after: {}".format(data_args.preset_train_data_path))
+
+    if os.path.exists(data_args.data_path) is False:
+        rank0_print("[data_preprocess] 文件: {}, 不存在".format(data_args.data_path))
+        exit(99)
+
+    if data_args.data_exchange is True:
+        rank0_print("[data_exchange] start data_path before: {}".format(data_args.data_path))
+        replace_dict = {"question": "user", "answer": "assistant"}
+
+        if data_args.data_path.endswith(".json"):
+            output_path = "./train_data.json"
+            data_preprocess(input_path=data_args.data_path,
+                            output_path=output_path,
+                            replace_dict=replace_dict,
+                            preset_data_path=data_args.preset_train_data_path,
+                            preset_data_ratio=data_args.preset_train_data_ratio)
+            data_args.data_path = output_path
+        else:
+            rank0_print("[data_exchange] data_path: {}, 没有以 .json 结尾".format(data_args.data_path))
+            exit(99)
+
+        rank0_print("[data_exchange] data_path after: {}".format(data_args.data_path))
+
+    rank0_print("=" * 80)
+    data_args.data_dir = data_args.data_path
+    rank0_print("[data_exchange] data_dir after: {}".format(data_args.data_dir))
+
+    rank0_print("=" * 80)
+    rank0_print("[train][train_params_preprocess] start")
+    training_args = train_params_preprocess(training_args=training_args, data_args=data_args)
+    rank0_print("[train][train_params_preprocess] end, gradient_accumulation_steps: {}".format(
+        training_args.gradient_accumulation_steps))
+
+    rank0_print("=" * 80)
     # This serves for single-gpu qlora.
     if getattr(training_args, 'deepspeed', None) and int(os.environ.get("WORLD_SIZE", 1))==1:
         training_args.distributed_state.distributed_type = DistributedType.DEEPSPEED
 
-    local_rank = training_args.local_rank
-
+    # device_map = "auto"
     device_map = None
     world_size = int(os.environ.get("WORLD_SIZE", 1))
     ddp = world_size != 1
@@ -291,22 +405,10 @@ def train():
                 "FSDP or ZeRO3 are incompatible with QLoRA."
             )
 
-    is_chat_model = 'chat' in model_args.model_name_or_path.lower()
-    if (
-            training_args.use_lora
-            and not lora_args.q_lora
-            and deepspeed.is_deepspeed_zero3_enabled()
-            and not is_chat_model
-    ):
-        raise RuntimeError("ZeRO3 is incompatible with LoRA when finetuning on base model.")
-
-    model_load_kwargs = {
-        'low_cpu_mem_usage': not deepspeed.is_deepspeed_zero3_enabled(),
-    }
-
     # Set RoPE scaling factor
     config = transformers.AutoConfig.from_pretrained(
-        model_args.model_name_or_path,
+        # model_args.model_name_or_path,
+        model_args.pretrained_model_path,
         cache_dir=training_args.cache_dir,
         trust_remote_code=True,
     )
@@ -314,7 +416,8 @@ def train():
 
     # Load model and tokenizer
     model = transformers.AutoModelForCausalLM.from_pretrained(
-        model_args.model_name_or_path,
+        # model_args.model_name_or_path,
+        model_args.pretrained_model_path,
         config=config,
         cache_dir=training_args.cache_dir,
         device_map=device_map,
@@ -324,20 +427,25 @@ def train():
         )
         if training_args.use_lora and lora_args.q_lora
         else None,
-        **model_load_kwargs,
     )
     tokenizer = transformers.AutoTokenizer.from_pretrained(
-        model_args.model_name_or_path,
+        # model_args.model_name_or_path,
+        model_args.pretrained_model_path,
         cache_dir=training_args.cache_dir,
         model_max_length=training_args.model_max_length,
         padding_side="right",
         use_fast=False,
         trust_remote_code=True,
     )
-    tokenizer.pad_token_id = tokenizer.eod_id
+
+    if hasattr(tokenizer, "pad_token_id"):
+        if tokenizer.pad_token_id is None and hasattr(tokenizer, "eod_id"):
+            tokenizer.pad_token_id = tokenizer.eod_id
+    logger.info("[tokenizer] tokenizer.pad_token_id: {}".format(tokenizer.pad_token_id))
 
     if training_args.use_lora:
-        if lora_args.q_lora or is_chat_model:
+        # if lora_args.q_lora or 'chat' in model_args.model_name_or_path.lower():
+        if lora_args.q_lora or 'chat' in model_args.pretrained_model_path.lower():
             modules_to_save = None
         else:
             modules_to_save = ["wte", "lm_head"]
@@ -373,11 +481,31 @@ def train():
         model=model, tokenizer=tokenizer, args=training_args, **data_module
     )
 
+    # delete useless callback
+    trainer.pop_callback(callback=PrinterCallback)
+    trainer.pop_callback(callback=ProgressCallback)
+    # add custom callback
+    save_loss_callback = SaveLossCallback(
+        loss_file_path=os.path.join(training_args.output_path, "metrics"))
+    trainer.add_callback(callback=save_loss_callback)
+
     trainer.train()
     trainer.save_state()
 
-    safe_save_model_for_hf_trainer(trainer=trainer, output_dir=training_args.output_dir, bias=lora_args.lora_bias)
+    rank0_print("=" * 80)
+    rank0_print("[save_model] start")
+    tmp_output_path = os.path.join(training_args.output_path, "tmp")
+    safe_save_model_for_hf_trainer(trainer=trainer, output_dir=tmp_output_path, bias=lora_args.lora_bias)
+    merge_save_model(trainer=trainer,
+                     path_to_adapter=tmp_output_path,
+                     new_model_directory=training_args.output_path,
+                     device_map=device_map)
+    rank0_print("=" * 80)
+    rank0_print("[train] finish !!!")
 
 
 if __name__ == "__main__":
+    start = time.time()
     train()
+    end = time.time()
+    rank0_print("[time_used] {}".format(end-start))

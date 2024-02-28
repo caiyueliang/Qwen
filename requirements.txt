@@ -1,6 +1,8 @@
-transformers==4.32.0
+transformers==4.37.1        # Required for Qwen2
 accelerate
 tiktoken
 einops
 transformers_stream_generator==0.0.4
 scipy
+flask
+loguru
