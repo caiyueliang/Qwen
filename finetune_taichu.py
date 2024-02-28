@@ -405,9 +405,22 @@ def train():
                 "FSDP or ZeRO3 are incompatible with QLoRA."
             )
 
+    # is_chat_model = 'chat' in model_args.model_name_or_path.lower()
+    is_chat_model = 'chat' in model_args.pretrained_model_path.lower()
+    if (
+            training_args.use_lora
+            and not lora_args.q_lora
+            and deepspeed.is_deepspeed_zero3_enabled()
+            and not is_chat_model
+    ):
+        raise RuntimeError("ZeRO3 is incompatible with LoRA when finetuning on base model.")
+
+    model_load_kwargs = {
+        'low_cpu_mem_usage': not deepspeed.is_deepspeed_zero3_enabled(),
+    }
+
     # Set RoPE scaling factor
     config = transformers.AutoConfig.from_pretrained(
-        # model_args.model_name_or_path,
         model_args.pretrained_model_path,
         cache_dir=training_args.cache_dir,
         trust_remote_code=True,
@@ -416,7 +429,6 @@ def train():
 
     # Load model and tokenizer
     model = transformers.AutoModelForCausalLM.from_pretrained(
-        # model_args.model_name_or_path,
         model_args.pretrained_model_path,
         config=config,
         cache_dir=training_args.cache_dir,
@@ -427,9 +439,9 @@ def train():
         )
         if training_args.use_lora and lora_args.q_lora
         else None,
+        **model_load_kwargs,
     )
     tokenizer = transformers.AutoTokenizer.from_pretrained(
-        # model_args.model_name_or_path,
         model_args.pretrained_model_path,
         cache_dir=training_args.cache_dir,
         model_max_length=training_args.model_max_length,
@@ -444,8 +456,7 @@ def train():
     logger.info("[tokenizer] tokenizer.pad_token_id: {}".format(tokenizer.pad_token_id))
 
     if training_args.use_lora:
-        # if lora_args.q_lora or 'chat' in model_args.model_name_or_path.lower():
-        if lora_args.q_lora or 'chat' in model_args.pretrained_model_path.lower():
+        if lora_args.q_lora or is_chat_model:
             modules_to_save = None
         else:
             modules_to_save = ["wte", "lm_head"]
