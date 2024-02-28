@@ -447,7 +447,7 @@ response, history = model.chat(tokenizer, "Hi", history=None)
 ### KVキャッシュ量子化
 
 > 注意: Hugging Faceの内部メカニズムにより、この機能のサポートファイル 
-> (すなわち、`cache_autogptq_cuda_256.cpp`と`cache_autogptq_cuda_kernel_245.cu`)が欠落している可能性があります。以下を手動でダウンロードしてください。
+> (すなわち、`cache_autogptq_cuda_256.cpp`と`cache_autogptq_cuda_kernel_256.cu`)が欠落している可能性があります。以下を手動でダウンロードしてください。
 > Hugging Face Hubから手動でダウンロードし、他のモジュールファイルと同じフォルダに入れてください。
 
 アテンション KV キャッシュを量子化して圧縮して保存すると、サンプルのスループットが向上する。この機能を有効にするには、`config.json` に `use_cache_quantization` と `use_cache_kernel` という引数を指定する。
@@ -948,6 +948,7 @@ print(response.choices[0].message.content)
 1. 使用するイメージに応じて、正しいバージョンのNvidiaドライバをインストールしてください：
   - `qwenllm/qwen:cu117` (**recommend**): `>= 515.48.07`
   - `qwenllm/qwen:cu114` (w/o flash-attention): `>= 470.82.01`
+  - `qwenllm/qwen:cu121`: `>= 530.30.02`
   - `qwenllm/qwen:latest`: same as `qwenllm/qwen:cu117`
 
 2. [Docker](https://docs.docker.com/engine/install/) と [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) をインストールして設定します：
