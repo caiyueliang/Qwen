@@ -437,7 +437,11 @@ def train():
         use_fast=False,
         trust_remote_code=True,
     )
-    tokenizer.pad_token_id = tokenizer.eod_id
+
+    if hasattr(tokenizer, "pad_token_id"):
+        if tokenizer.pad_token_id is None and hasattr(tokenizer, "eod_id"):
+            tokenizer.pad_token_id = tokenizer.eod_id
+    logger.info("[tokenizer] tokenizer.pad_token_id: {}".format(tokenizer.pad_token_id))
 
     if training_args.use_lora:
         # if lora_args.q_lora or 'chat' in model_args.model_name_or_path.lower():
